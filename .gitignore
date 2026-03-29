@@ -3,4 +3,5 @@ dist
 .git
 .env
 
-/src/generated/prisma
+**/generated/prisma/
+**/logs/
