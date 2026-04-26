@@ -8,7 +8,7 @@ class CloudinaryService {
    */
   async generateUploadSignature(
     publicId: string,
-    folder: string = "temp"
+    folder: string = "temp",
   ): Promise<{
     signature: string;
     timestamp: number;
@@ -24,13 +24,12 @@ class CloudinaryService {
         timestamp,
         public_id: publicId,
         folder,
-        // resource_type: "auto",
       };
 
       // Generate signature
       const signature = cloudinary.utils.api_sign_request(
         params,
-        process.env.CLOUDINARY_API_SECRET as string
+        process.env.CLOUDINARY_API_SECRET as string,
       );
 
       return {
@@ -51,17 +50,19 @@ class CloudinaryService {
    */
   async moveFile(
     sourcePublicId: string,
-    targetPublicId: string
+    targetPublicId: string,
+    resourceType: string = "auto",
   ): Promise<{ cloudinaryId: string; cloudinaryUrl: string }> {
     try {
       // Rename/move the file
+      console.log("Debug-moveFile", resourceType);
       const result = await cloudinary.uploader.rename(
         sourcePublicId,
         targetPublicId,
         {
-          // resource_type: "auto",
+          resource_type: resourceType,
           invalidate: true,
-        }
+        },
       );
 
       logger.info(`File moved from ${sourcePublicId} to ${targetPublicId}`);

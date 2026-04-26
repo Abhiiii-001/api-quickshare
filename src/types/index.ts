@@ -3,6 +3,7 @@ export interface UploadFileRequest {
   downloads: number;
   password?: string;
   usePassword: boolean;
+  resourceType: string;
 }
 
 export interface DownloadFileRequest {

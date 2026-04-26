@@ -16,7 +16,7 @@ export const hashPassword = async (password: string): Promise<string> => {
 
 export const comparePassword = async (
   password: string,
-  hashedPassword: string
+  hashedPassword: string,
 ): Promise<boolean> => {
   return bcrypt.compare(password, hashedPassword);
 };
@@ -33,4 +33,10 @@ export const calculateExpiryDate = (expiry: string): Date => {
     default:
       return new Date(now.getTime() + 24 * 60 * 60 * 1000);
   }
+};
+
+export const sanitizeFileName = (name: string) => {
+  return name
+    .replace(/\s+/g, "_") // spaces → _
+    .replace(/\.[^/.]+$/, "");
 };
