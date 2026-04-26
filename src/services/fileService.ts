@@ -5,6 +5,7 @@ import {
   hashPassword,
   comparePassword,
   calculateExpiryDate,
+  sanitizeFileName,
 } from "../utils/helper";
 import { UploadFileRequest, DownloadFileRequest, FileData } from "../types";
 import logger from "../config/logger";
@@ -12,7 +13,7 @@ import logger from "../config/logger";
 class FileService {
   async generateUploadUrl(
     fileName: string,
-    fileType: string
+    fileType: string,
   ): Promise<{
     uploadUrl: string;
     uploadPreset: string;
@@ -22,15 +23,17 @@ class FileService {
     timestamp: number;
     apiKey: string;
     cloudName: string;
+    resource_type: string;
   }> {
     try {
       const timestamp = Date.now();
-      const publicId = `temp/${timestamp}_${fileName}`;
+      const formattedFileName = sanitizeFileName(fileName);
+      const publicId = `${timestamp}_${formattedFileName}`;
 
       // Generate upload signature
       const uploadData = await cloudinaryService.generateUploadSignature(
         publicId,
-        "temp"
+        "temp",
       );
 
       logger.info(`Upload URL generated for: ${fileName}`);
@@ -44,6 +47,7 @@ class FileService {
         timestamp: uploadData.timestamp,
         apiKey: uploadData.apiKey,
         cloudName: uploadData.cloudName,
+        resource_type: "auto",
       };
     } catch (error) {
       logger.error("Generate upload URL error:", error);
@@ -60,7 +64,7 @@ class FileService {
       originalName: string;
       mimetype: string;
       size: number;
-    }
+    },
   ): Promise<{ code: string; expiresAt: Date }> {
     try {
       // Extract public_id from cloudinary URL
@@ -80,9 +84,21 @@ class FileService {
       }
 
       // Move file from temp to permanent folder
-      const permanentPublicId = `quickshare/${code}_${options.originalName}`;
+      const fileName = sanitizeFileName(options.originalName);
+      const permanentPublicId = `quickshare/${code}_${fileName}`;
+      console.log(
+        "Debug-uploadFile",
+        options,
+        cloudinaryUrl,
+        tempPublicId,
+        permanentPublicId,
+      );
       const { cloudinaryId, cloudinaryUrl: permanentUrl } =
-        await cloudinaryService.moveFile(tempPublicId, permanentPublicId);
+        await cloudinaryService.moveFile(
+          tempPublicId,
+          permanentPublicId,
+          options.resourceType,
+        );
 
       // Hash password if provided
       const hashedPassword = options.password
@@ -136,7 +152,7 @@ class FileService {
       // Remove file extension
       const publicId = publicIdWithExt.substring(
         0,
-        publicIdWithExt.lastIndexOf(".")
+        publicIdWithExt.lastIndexOf("."),
       );
       return publicId;
     } catch (error) {
@@ -213,7 +229,7 @@ class FileService {
       if (file.password && request.password) {
         const isPasswordValid = await comparePassword(
           request.password,
-          file.password
+          file.password,
         );
         if (!isPasswordValid) {
           throw new Error("Invalid password");

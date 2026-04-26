@@ -30,6 +30,7 @@ export const confirmUploadSchema = Joi.object({
   expiry: Joi.string().required(),
   downloads: Joi.number().integer().min(1).max(100).required(),
   usePassword: Joi.boolean().required(),
+  resourceType: Joi.string().optional(),
   password: Joi.string().min(6).when("usePassword", {
     is: true,
     then: Joi.required(),
