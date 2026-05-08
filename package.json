@@ -1,7 +1,7 @@
 {
-  "name": "quickshare-backend",
+  "name": "rapidshare-backend",
   "version": "1.0.0",
-  "description": "QuickShare Backend API",
+  "description": "RapidShare Backend API",
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/server.ts",
