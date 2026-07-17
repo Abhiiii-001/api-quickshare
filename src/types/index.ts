@@ -21,3 +21,5 @@ export interface FileData {
   maxDownloads: number;
   downloadCount: number;
 }
+
+export * from "./portal";

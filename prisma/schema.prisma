@@ -33,3 +33,20 @@ model File {
   @@index([expiresAt])
   @@map("files")
 }
+
+model CodePortal {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  language      String   @default("javascript")
+  content       String   @default("")
+  isEditable    Boolean  @default(true)
+  creatorToken  String
+  password      String?
+  expiresAt     DateTime
+  activeUsers   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([code])
+  @@map("code_portals")
+}
