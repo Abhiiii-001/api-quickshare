@@ -77,9 +77,9 @@ class CloudinaryService {
     }
   }
 
-  async deleteFile(cloudinaryId: string): Promise<void> {
+  async deleteFile(cloudinaryId: string, resourceType: string = "image"): Promise<void> {
     try {
-      await cloudinary.uploader.destroy(cloudinaryId);
+      await cloudinary.uploader.destroy(cloudinaryId, { resource_type: resourceType });
       logger.info(`File deleted from Cloudinary: ${cloudinaryId}`);
     } catch (error) {
       logger.error("Cloudinary delete error:", error);
@@ -129,6 +129,57 @@ class CloudinaryService {
       return true;
     } catch (error) {
       return false;
+    }
+  }
+
+  /**
+   * Upload a buffer to Cloudinary via stream.
+   * Required for server-side compression flow where the file passes through the backend.
+   */
+  async uploadStream(
+    buffer: Buffer,
+    publicId: string,
+    resourceType: string = "auto",
+  ): Promise<{ cloudinaryId: string; cloudinaryUrl: string }> {
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          public_id: publicId,
+          resource_type: resourceType as "auto" | "image" | "raw" | "video",
+          folder: "rapidshare",
+        },
+        (error, result) => {
+          if (error) {
+            logger.error("Cloudinary stream upload error:", error);
+            reject(new Error("Failed to upload file stream to Cloudinary"));
+          } else if (result) {
+            logger.info(`File stream uploaded successfully: ${result.public_id}`);
+            resolve({
+              cloudinaryId: result.public_id,
+              cloudinaryUrl: result.secure_url,
+            });
+          }
+        },
+      );
+
+      streamifier.createReadStream(buffer).pipe(uploadStream);
+    });
+  }
+
+  /**
+   * Fetch a file from Cloudinary as an array buffer.
+   */
+  async fetchFile(cloudinaryUrl: string): Promise<Buffer> {
+    try {
+      const response = await fetch(cloudinaryUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file from Cloudinary: ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    } catch (error) {
+      logger.error("Cloudinary fetch error:", error);
+      throw new Error("Failed to fetch file for download");
     }
   }
 }

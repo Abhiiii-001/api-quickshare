@@ -5,6 +5,7 @@ import compression from "compression";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import fileRoutes from "./routes/fileRoutes";
+import metricsRoutes from "./routes/metricsRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 import logger from "./config/logger";
 import fileService from "./services/fileService";
@@ -43,6 +44,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/files", fileRoutes);
+app.use("/api/metrics", metricsRoutes);
 
 // Error handler
 app.use(errorHandler);
