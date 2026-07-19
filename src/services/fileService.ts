@@ -9,6 +9,7 @@ import {
 } from "../utils/helper";
 import { UploadFileRequest, DirectUploadFileRequest, DownloadFileRequest, FileData } from "../types";
 import { compressionService } from "./compression";
+import { encryptionService } from "./encryption";
 import logger from "../config/logger";
 
 class FileService {
@@ -201,6 +202,8 @@ class FileService {
         isCompressed: file.isCompressed,
         compressedSize: file.compressedSize,
         compressionRatio: file.compressionRatio,
+        isEncrypted: file.isEncrypted,
+        encryptedSize: file.encryptedSize,
       };
     } catch (error) {
       logger.error("Get file error:", error);
@@ -312,15 +315,20 @@ class FileService {
       }
 
       // 2. Compress file if beneficial
-      const { data: uploadBuffer, metadata } = await compressionService.compress(
+      const { data: compressedBuffer, metadata: compressionMetadata } = await compressionService.compress(
         fileBuffer,
         originalName,
         mimetype
       );
 
-      // 3. Upload to Cloudinary via stream
-      // Compressed files are raw binary, otherwise use auto
-      const resourceType = metadata.wasCompressed ? "raw" : "auto";
+      // 3. Encrypt the file (after compression)
+      const { data: uploadBuffer, metadata: encryptionMetadata } = await encryptionService.encrypt(
+        compressedBuffer
+      );
+
+      // 4. Upload to Cloudinary via stream
+      // Compressed/encrypted files are raw binary, otherwise use auto
+      const resourceType = (compressionMetadata.wasCompressed || encryptionMetadata.wasEncrypted) ? "raw" : "auto";
       const fileName = sanitizeFileName(originalName, resourceType === "raw");
       const publicId = `rapidshare/${code}_${fileName}`;
 
@@ -343,19 +351,29 @@ class FileService {
           originalName,
           fileName,
           mimetype,
-          size: metadata.originalSize,
+          size: compressionMetadata.originalSize,
           cloudinaryId,
           cloudinaryUrl,
           password: hashedPassword,
           expiresAt,
           maxDownloads: options.downloads,
           resourceType,
-          isCompressed: metadata.wasCompressed,
-          compressedSize: metadata.wasCompressed ? metadata.compressedSize : null,
-          compressionAlgo: metadata.wasCompressed ? metadata.algorithm : null,
-          compressionLevel: metadata.wasCompressed ? metadata.level : null,
-          compressionRatio: metadata.wasCompressed ? metadata.compressionRatio : null,
-          compressionTimeMs: metadata.wasCompressed ? metadata.compressionTimeMs : null,
+          isCompressed: compressionMetadata.wasCompressed,
+          compressedSize: compressionMetadata.wasCompressed ? compressionMetadata.compressedSize : null,
+          compressionAlgo: compressionMetadata.wasCompressed ? compressionMetadata.algorithm : null,
+          compressionLevel: compressionMetadata.wasCompressed ? compressionMetadata.level : null,
+          compressionRatio: compressionMetadata.wasCompressed ? compressionMetadata.compressionRatio : null,
+          compressionTimeMs: compressionMetadata.wasCompressed ? compressionMetadata.compressionTimeMs : null,
+          isEncrypted: encryptionMetadata.wasEncrypted,
+          encryptionVersion: encryptionMetadata.wasEncrypted ? encryptionMetadata.version : null,
+          encryptionAlgo: encryptionMetadata.wasEncrypted ? encryptionMetadata.algorithm : null,
+          wrappedKey: encryptionMetadata.wasEncrypted ? encryptionMetadata.wrappedKey : null,
+          encryptionIv: encryptionMetadata.wasEncrypted ? encryptionMetadata.iv : null,
+          encryptionAuthTag: encryptionMetadata.wasEncrypted ? encryptionMetadata.authTag : null,
+          wrapIv: encryptionMetadata.wasEncrypted ? encryptionMetadata.wrapIv : null,
+          wrapAuthTag: encryptionMetadata.wasEncrypted ? encryptionMetadata.wrapAuthTag : null,
+          encryptedSize: encryptionMetadata.wasEncrypted ? encryptionMetadata.encryptedSize : null,
+          encryptionTimeMs: encryptionMetadata.wasEncrypted ? encryptionMetadata.encryptionTimeMs : null,
         },
       });
 
@@ -398,6 +416,22 @@ class FileService {
 
       // Fetch from Cloudinary
       let buffer = await cloudinaryService.fetchFile(file.cloudinaryUrl);
+
+      // Decrypt if it was encrypted
+      if (file.isEncrypted) {
+        buffer = await encryptionService.decrypt(buffer, {
+          algorithm: file.encryptionAlgo!,
+          version: file.encryptionVersion!,
+          wasEncrypted: file.isEncrypted,
+          wrappedKey: file.wrappedKey!,
+          iv: file.encryptionIv!,
+          authTag: file.encryptionAuthTag!,
+          wrapIv: file.wrapIv!,
+          wrapAuthTag: file.wrapAuthTag!,
+          encryptedSize: file.encryptedSize!,
+          encryptionTimeMs: file.encryptionTimeMs!,
+        });
+      }
 
       // Decompress if it was compressed
       if (file.isCompressed) {

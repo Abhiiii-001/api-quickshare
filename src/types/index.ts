@@ -30,4 +30,6 @@ export interface FileData {
   isCompressed: boolean;
   compressedSize: number | null;
   compressionRatio: number | null;
+  isEncrypted: boolean;
+  encryptedSize: number | null;
 }

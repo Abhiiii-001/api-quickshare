@@ -42,6 +42,18 @@ model File {
   compressionRatio   Float?
   compressionTimeMs  Int?
 
+  // Encryption metadata
+  isEncrypted        Boolean  @default(false)
+  encryptionVersion  Int?
+  encryptionAlgo     String?
+  wrappedKey         String?
+  encryptionIv       String?
+  encryptionAuthTag  String?
+  wrapIv             String?
+  wrapAuthTag        String?
+  encryptedSize      Int?
+  encryptionTimeMs   Int?
+
   @@index([code])
   @@index([expiresAt])
   @@map("files")
