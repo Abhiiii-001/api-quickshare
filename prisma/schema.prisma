@@ -5,12 +5,14 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model File {
@@ -28,6 +30,29 @@ model File {
   downloadCount Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  // Cloudinary resource type (image, video, raw) — needed for correct API calls
+  resourceType  String   @default("auto")
+
+  // Compression metadata
+  isCompressed       Boolean  @default(false)
+  compressedSize     Int?
+  compressionAlgo    String?
+  compressionLevel   Int?
+  compressionRatio   Float?
+  compressionTimeMs  Int?
+
+  // Encryption metadata
+  isEncrypted        Boolean  @default(false)
+  encryptionVersion  Int?
+  encryptionAlgo     String?
+  wrappedKey         String?
+  encryptionIv       String?
+  encryptionAuthTag  String?
+  wrapIv             String?
+  wrapAuthTag        String?
+  encryptedSize      Int?
+  encryptionTimeMs   Int?
 
   @@index([code])
   @@index([expiresAt])

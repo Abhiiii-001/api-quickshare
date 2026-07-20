@@ -7,6 +7,7 @@ import {
   confirmUploadSchema,
 } from "../validators/fileValidator";
 import * as fileController from "../controllers/fileController";
+import { upload } from "../middleware/multerUpload";
 
 const router = express.Router();
 
@@ -20,6 +21,13 @@ router.post(
   "/get-upload-url",
   validate(getUploadUrlSchema),
   fileController.getUploadUrl
+);
+
+// New direct backend proxy upload flow (with compression)
+router.post(
+  "/upload-direct",
+  upload.single("file") as any,
+  fileController.uploadFileDirect as any
 );
 
 router.post(

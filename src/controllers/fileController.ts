@@ -59,6 +59,41 @@ export const uploadFile = async (
   }
 };
 
+export const uploadFileDirect = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file provided" });
+    }
+
+    const { originalname: originalName, mimetype, buffer } = req.file;
+    const options = req.body; // Multer parses the other fields into req.body
+
+    const result = await fileService.uploadFileDirect(
+      buffer,
+      originalName,
+      mimetype,
+      {
+        expiry: options.expiry,
+        downloads: parseInt(options.downloads, 10),
+        usePassword: options.usePassword === "true" || options.usePassword === true,
+        password: options.password,
+      }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "File uploaded successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const downloadFile = async (
   req: Request,
   res: Response,
@@ -66,13 +101,15 @@ export const downloadFile = async (
 ) => {
   try {
     const request: DownloadFileRequest = req.body;
-    const fileUrl = await fileService.downloadFile(request);
+    const { buffer, file } = await fileService.downloadFileStream(request);
 
-    res.status(200).json({
-      success: true,
-      message: "File ready for download",
-      data: { url: fileUrl },
-    });
+    // Set appropriate headers for file download
+    res.setHeader("Content-Disposition", `attachment; filename="${file.originalName}"`);
+    res.setHeader("Content-Type", file.mimetype);
+    res.setHeader("Content-Length", buffer.length);
+    
+    // Send the buffer directly
+    res.status(200).send(buffer);
   } catch (error: any) {
     res.status(400).json({
       success: false,
