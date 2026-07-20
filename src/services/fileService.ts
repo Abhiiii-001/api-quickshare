@@ -266,7 +266,8 @@ class FileService {
 
       if (file) {
         await cloudinaryService.deleteFile(file.cloudinaryId, file.resourceType);
-        await prisma.file.delete({ where: { id: fileId } });
+        // We will keep entry, just delete file from cloudinary
+        // await prisma.file.delete({ where: { id: fileId } });
         logger.info(`File deleted: ${file.code}`);
       }
     } catch (error) {
